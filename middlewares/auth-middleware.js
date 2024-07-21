@@ -1,14 +1,19 @@
 const jwt = require("jsonwebtoken");
+const { ErrorResult } = require("../utils/Results");
+const { AUTH_MESSAGES } = require("../utils/messages/user-messages");
 require("dotenv").config();
 
 const authMiddleware = (req, res, next) => {
-  const authenticationHeaders = req.headers.authorization;
+  const authenticationHeader = req.headers.authorization;
 
-  const token = authenticationHeaders.split(" ")[1];
+  const token = authenticationHeader && authenticationHeader.split(" ")[1];
 
-  jwt.verify(token, process.env.MY_SECRET_KEY, (err, user) => {
-    if (err) res.sendStatus(401);
-    else {
+  if (!token) res.status(401).json(new ErrorResult("There is no token"));
+
+  jwt.verify(token, process.env.JWT_SECRET_KEY, (err, user) => {
+    if (err) {
+      res.status(401).json(new ErrorResult("Token has been expired"));
+    } else {
       req.user = user;
       next();
     }

@@ -1,8 +1,8 @@
 class Result {
   constructor(success, data = null, message = null) {
     this.success = success;
-    this.data = data;
     this.message = message;
+    this.data = data;
   }
 }
 
@@ -21,4 +21,5 @@ class SuccessResult extends Result {
 module.exports = {
   ErrorResult,
   SuccessResult,
+  Result,
 };

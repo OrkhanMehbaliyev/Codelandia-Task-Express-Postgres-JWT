@@ -1,35 +1,41 @@
 const jwt = require("jsonwebtoken");
 const AccessToken = require("../utils/AccessToken");
 const userService = require("../services/user-service");
-const { ErrorResult, SuccessResult } = require("../utils/results");
+const { ErrorResult, SuccessResult } = require("../utils/Results");
 const bcrypt = require("bcrypt");
-const User = require("../models/user/user");
+const { Transfer } = require("../utils/Transfer");
+const { USER_MESSAGES } = require("../utils/messages/user-messages");
 require("dotenv").config();
 
 const loginUser = async (user) => {
-  const userExistingResult = await userService.getUserByUsername(user.username);
-
-  if (userExistingResult.success && userExistingResult.data == null)
-    return new ErrorResult("USER DOES NOT EXIST");
-
-  console.log(userExistingResult);
-  const passwordCheckResult = await bcrypt.compare(
-    user.password,
-    userExistingResult.data.password
+  const { response, statusCode } = await userService.getUserByUsername(
+    user.username
   );
 
-  if (!passwordCheckResult) return new ErrorResult("Incorrect password");
+  if (!response?.success || !response?.data)
+    return Transfer(response, statusCode);
+
+  const passwordCheckResult = await bcrypt.compare(
+    user?.password,
+    response?.data.password
+  );
+
+  if (!passwordCheckResult)
+    return Transfer(new ErrorResult(USER_MESSAGES.PASSWORD_INCORRECT), 400);
 
   const token = await jwt.sign(
-    { username: userExistingResult.data.username },
+    { username: response?.data.username },
     process.env.JWT_SECRET_KEY,
-    { expiresIn: "1m" }
+    { expiresIn: "1h" }
   );
 
   const expireDate = new Date();
   expireDate.setHours(expireDate.getHours() + 1);
   const accessToken = new AccessToken(token, expireDate.toString());
-  return new SuccessResult("User logged in successfully", accessToken);
+  return Transfer(
+    new SuccessResult(USER_MESSAGES.LOGIN_SUCCESS, accessToken),
+    200
+  );
 };
 
 module.exports = {

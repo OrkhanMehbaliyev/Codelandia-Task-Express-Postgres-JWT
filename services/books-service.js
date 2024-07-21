@@ -1,19 +1,30 @@
 const pool = require("../config/db");
 const Book = require("../models/book/book");
-const { ErrorResult, SuccessResult } = require("../utils/results");
+const BOOK_MESSAGES = require("../utils/messages/book-messages");
+const { ErrorResult, SuccessResult } = require("../utils/Results");
+const { Transfer } = require("../utils/Transfer");
 
 const getBookById = async (id) => {
-  const result = await pool.query("select * from books b where b.id = $1", [
+  const result = await pool.safeQuery("select * from books b where b.id = $1", [
     id,
   ]);
 
-  const book = Book.mapOne(result.rows[0]);
-  if (book == null) return new ErrorResult("Book was not found!");
-  return new SuccessResult("Book found successfully", book);
+  if (result instanceof Error)
+    return Transfer(new ErrorResult(SYSTEM_ERRORS.DB_ERROR, result), 501);
+
+  if (result.rows.length != 0) return Transfer(BOOK_MESSAGES.FOUND_ERROR, 404);
+
+  result = Book.mapAll(result.rows);
+
+  return new SuccessResult(BOOK_MESSAGES.FOUND_SUCCESS, result);
 };
 
+//HERE
 const getAllBooks = async () => {
-  const result = await pool.query("select * from books");
+  const result = await pool.safeQuery("select * from books");
+
+  if (result instanceof Error)
+    return Transfer(new ErrorResult(SYSTEM_ERRORS.DB_ERROR, result), 501);
 
   result = Book.mapAll(result.rows);
   return new SuccessResult("Book found successfully", result);
@@ -21,7 +32,7 @@ const getAllBooks = async () => {
 
 const addBook = async (book) => {
   book = Book.mapOne(book);
-  const result = await pool.query("call add_book($1,$2,$3,$4)", [
+  const result = await pool.safeQuery("call add_book($1,$2,$3,$4)", [
     book.title,
     book.author,
     book.publish_date,
@@ -31,7 +42,7 @@ const addBook = async (book) => {
 };
 
 const deleteBookById = async (id) => {
-  const result = await pool.query("delete from books where id = $1", [id]);
+  const result = await pool.safeQuery("delete from books where id = $1", [id]);
   return new SuccessResult("Book deleted successfully");
 };
 
